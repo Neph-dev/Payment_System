@@ -41,7 +41,7 @@ export const createPlan = async (req: Request, res: Response) => {
                 isOnPromotion: false,
                 oldPrice: price
             },
-            createdAt: new Date
+            createdAt: new Date().toISOString()
         }
 
         const params = {

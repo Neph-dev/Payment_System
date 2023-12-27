@@ -10,7 +10,7 @@ export interface IIAMUser  {
         email: string
     }
     name: string
-    role: UserRole.IAM
+    role: UserRole
     merchant: string
     createdAt: Date
 }

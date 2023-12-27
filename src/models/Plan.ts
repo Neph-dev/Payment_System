@@ -8,19 +8,27 @@ export interface IPlan {
     description: string
     price: number
     currency: string
-    promotion: {
+    type?: PlanType
+    promotion?: {
         isOnPromotion: boolean
         oldPrice?: number
-        promotionStart?: Date
-        promotionEnd?: Date
+        promotionStart?: string
+        promotionEnd?: string
     }
-    features: [
-        {
-            featureId: string
-            featureName: string
-            featureDescription: string
-        }
-    ]
+    features?: PlanFeature[]
     isActive: boolean
-    createdAt: Date
+    createdAt: string
+}
+
+type PlanType = {
+    isRecurring: boolean
+    isOneTime: boolean
+    interval?: string // recurring only
+    trialPeriodDays?: number // recurring only
+}
+
+type PlanFeature = {
+    featureId: string
+    featureName: string
+    featureDescription: string
 }
