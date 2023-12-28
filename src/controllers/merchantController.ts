@@ -3,7 +3,7 @@ import { Request, Response } from 'express'
 import AWS from 'aws-sdk'
 
 import bcrypt from 'bcrypt'
-
+import dayjs from 'dayjs'
 import { v4 as uuidv4 } from 'uuid'
 
 import { AccountType, IMerchant, MerchantStatus } from '../models/Merchant'
@@ -13,6 +13,7 @@ import {
     findMerchantByRegistrationNumber 
 } from '../helpers/findMerchant'
 import { CreateSuperAdmin } from './superAdminController'
+import { sendMerchantVerificationEmail } from '../helpers/sendEmail'
 
 AWS.config.update({ region: 'af-south-1' })
 const dynamoDB = new AWS.DynamoDB.DocumentClient()
@@ -57,6 +58,7 @@ export const createMerchant = async (req: Request, res: Response) => {
             email: email,
             accountType: body.accountType,
             registrationNumber: body.registrationNumber,
+            isAccountVerified: false,
             auth: {
                 emailAddress: email,
                 password: body.password
@@ -81,11 +83,15 @@ export const createMerchant = async (req: Request, res: Response) => {
             createdAt: new Date()
         }
 
+        const verificationToken = uuidv4()
+        merchant.auth.confirmationCode = verificationToken
+        merchant.auth.codeExpirationDate = dayjs().hour(24).format()
+        
         const params = { TableName: MERCHANT_TABLE_NAME, Item: merchant }
-
+        
         await dynamoDB.put(params).promise()
         const createSuperAdmin = await CreateSuperAdmin(req, res)
-
+        
         if (createSuperAdmin === 500) {
             return res.status(500).json({ 
                 message: 'Error Creating Super Admin',
@@ -93,6 +99,9 @@ export const createMerchant = async (req: Request, res: Response) => {
                 success: false
             })
         }
+        
+        await sendMerchantVerificationEmail(email, verificationToken)
+
         res.status(201).json({ 
             message: 'Merchant Created Successfully!',
             status: 201,

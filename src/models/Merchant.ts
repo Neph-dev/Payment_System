@@ -6,9 +6,12 @@ export interface IMerchant {
     email: string
     registrationNumber: string
     accountType: AccountType
+    isAccountVerified: boolean
     auth: {
         emailAddress: string
         password: string
+        confirmationCode?: string
+        codeExpirationDate?: string
     }
     information: {
         logo?: string

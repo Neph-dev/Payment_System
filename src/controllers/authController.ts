@@ -29,6 +29,15 @@ export const Login = async (req: Request, res: Response) => {
             }
 
             const token = await CreateToken(loginAsMerchant)
+
+            if(loginAsMerchant.isAccountVerified === false) {
+                return res.status(200).json({ 
+                    message: 'Login Successfull',
+                    status: 200,
+                    token,
+                    isAccountVerified: false
+                })
+            }
             
             return res.status(200).json({ 
                 message: 'Login Successfull',
@@ -48,6 +57,15 @@ export const Login = async (req: Request, res: Response) => {
             }
 
             const token = await CreateToken(loginAsIAMorAdmin)
+
+            if(loginAsIAMorAdmin.isAccountVerified === false) {
+                return res.status(200).json({ 
+                    message: 'Login Successfull',
+                    status: 200,
+                    token,
+                    isAccountVerified: false
+                })
+            }
             
             return res.status(200).json({ 
                 message: 'Login Successfull',

@@ -14,6 +14,12 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
             return res.status(500).json({ message: 'Failed to authenticate token' })
         }
         req.body.decoded = decoded
+
+        if(decoded.data.isAccountVerified === false) {
+            return res.status(403).json({ 
+                message: "Account not verified. Please check your email for verification link" 
+            })
+        }
         
         decoded.data.auth.password = null
 

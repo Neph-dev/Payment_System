@@ -5,9 +5,12 @@ export interface IIAMUser  {
     nameIndex: string
     
     IAMid: string
+    isAccountVerified: boolean
     auth: {
         password: string
         email: string
+        confirmationCode?: string
+        codeExpirationDate?: string
     }
     name: string
     role: UserRole
