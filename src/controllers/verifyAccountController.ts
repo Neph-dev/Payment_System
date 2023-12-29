@@ -12,7 +12,7 @@ const MERCHANT_TABLE_NAME = 'Merchants'
 const IAM_TABLE_NAME = 'IAMusers'
 
 
-export const verifyMerchantAccountController = async (req: Request, res: Response) => {
+export const verifyMerchantAccount = async (req: Request, res: Response) => {
     try {
         const { email, token } = req.params
 
@@ -60,8 +60,7 @@ export const verifyMerchantAccountController = async (req: Request, res: Respons
     }
 }
 
-
-export const verifyIAMAccountController = async (req: Request, res: Response) => {
+export const verifyIAMAccount = async (req: Request, res: Response) => {
     try {
         const { email, token } = req.params
 

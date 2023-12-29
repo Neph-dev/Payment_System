@@ -8,7 +8,7 @@ export interface IPlan {
     description: string
     price: number
     currency: string
-    type?: PlanType
+    planType: PlanType
     promotion?: {
         isOnPromotion: boolean
         oldPrice?: number
@@ -22,13 +22,20 @@ export interface IPlan {
 
 type PlanType = {
     isRecurring: boolean
-    isOneTime: boolean
-    interval?: string // recurring only
-    trialPeriodDays?: number // recurring only
+    interval?: number // recurring only
+    intervalUnit?: IntervalUnit // recurring only
+    trialPeriodDays: number // recurring only
 }
 
 type PlanFeature = {
     featureId: string
     featureName: string
     featureDescription: string
+}
+
+export enum IntervalUnit {
+    day = 'day',
+    week = 'week',
+    month = 'month',
+    year = 'year'
 }

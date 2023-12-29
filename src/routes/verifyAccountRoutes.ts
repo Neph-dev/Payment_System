@@ -1,9 +1,9 @@
 import express from 'express'
-import { verifyMerchantAccountController, verifyIAMAccountController } from '../controllers/verifyAccountController'
+import { verifyMerchantAccount, verifyIAMAccount } from '../controllers/verifyAccountController'
 
 const verifyAccountRoutes = express.Router()
 
-verifyAccountRoutes.get('/:token/:email', verifyMerchantAccountController)
-verifyAccountRoutes.get('/IAM/:token/:email', verifyIAMAccountController)
+verifyAccountRoutes.get('/:token/:email', verifyMerchantAccount)
+verifyAccountRoutes.get('/IAM/:token/:email', verifyIAMAccount)
 
 export default verifyAccountRoutes

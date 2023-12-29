@@ -15,7 +15,7 @@ export const createPlan = async (req: Request, res: Response) => {
     try {
         let body = req.body 
         let merchantId = body.decoded.data.MerchantId
-        const { name, description, price, currency, features } = req.body
+        const { name, description, price, currency, features, planType } = req.body
 
         const existingPlanByName = await findPlanByNameAndMerchantId(name, merchantId)
         if (existingPlanByName) {
@@ -36,6 +36,7 @@ export const createPlan = async (req: Request, res: Response) => {
             price: price,
             currency: currency,
             features: features,
+            planType: planType,
             isActive: true,
             promotion: {
                 isOnPromotion: false,

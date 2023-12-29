@@ -3,6 +3,8 @@ import { Request, Response } from 'express'
 import AWS from 'aws-sdk'
 
 import { v4 as uuidv4 } from 'uuid'
+import dayjs from 'dayjs'
+
 import { ISubscription, SubscriptionStatus } from '../models/Subscription'
 import { findPlanByIdAndMerchantId } from '../helpers/findPlan'
 
@@ -17,8 +19,6 @@ export const subscribe = async (req: Request, res: Response) => {
             reference, 
             merchantId,
             planId,
-            billing,
-            freeTrial,
             paymentMethod,
             renewal,
             notificationPreferences,
@@ -40,15 +40,28 @@ export const subscribe = async (req: Request, res: Response) => {
             planIdIndex: planId,
 
             subscriptionId: uuidv4(),
-            merchantId: merchantId,
-            planId: planId,
-            billing: billing,
-            freeTrial: freeTrial,
+            subscriptionStatus: SubscriptionStatus.Active,
+            cancellationReason: null,
+            billing: {
+                nextBillingDate: await handleNextBillingDate(planByIdAndMerchantId),
+                lastBillingDate: null,
+                billingCycle: planByIdAndMerchantId.planType.interval,
+                billingCycleUnit: planByIdAndMerchantId.planType.intervalUnit,
+                billingAmount: planByIdAndMerchantId.price,
+                billingCycleAnchor: await handleFreeTrial(planByIdAndMerchantId) ? await handleFreeTrialEnd(planByIdAndMerchantId) : new Date().toISOString(),
+                billingCurrency: planByIdAndMerchantId.currency
+            },
+            freeTrial: {
+                isOnFreeTrial: await handleFreeTrial(planByIdAndMerchantId),
+                freeTrialStart: await handleFreeTrial(planByIdAndMerchantId) ? new Date().toISOString() : undefined,
+                freeTrialEnd: await handleFreeTrial(planByIdAndMerchantId) ? await handleFreeTrialEnd(planByIdAndMerchantId) : undefined
+            },
             paymentMethod: paymentMethod,
-            renewal: renewal,
+            renewal: {
+                autoRenew: renewal.autoRenew || true
+            },
             notificationPreferences: notificationPreferences,
             metadata: metadata,
-            subscriptionStatus: SubscriptionStatus.Active,
             createdAt: new Date().toISOString()
         }
 
@@ -62,16 +75,48 @@ export const subscribe = async (req: Request, res: Response) => {
             status: 201,
             success: true,
             message: 'Subscription created successfully',
-            data: subscription
+            data1: subscription,
+            data: planByIdAndMerchantId
         })
 
     }
-    catch (error) {
+    catch (err: any) {
         res.status(500).json({ 
             status: 500,
             success: false,
-            message: error
+            message: 'Error creating subscription', 
+            error: err.message
         })
+    }
+}
+
+const handleFreeTrial = async (planByIdAndMerchantId: any) => {
+    if(
+        planByIdAndMerchantId?.planType.isRecurring && 
+        planByIdAndMerchantId?.planType?.trialPeriodDays > 0
+    ) {
+        return true
+    }
+    else return false
+}
+
+const handleFreeTrialEnd = async (planByIdAndMerchantId: any) => {
+    return dayjs(new Date())
+    .add(planByIdAndMerchantId?.planType?.trialPeriodDays, 'day')
+    .toISOString()
+}
+
+const handleNextBillingDate = async (planByIdAndMerchantId: any) => {
+    if(planByIdAndMerchantId?.planType.isRecurring === false) {
+        return null
+    }
+    else if(await handleFreeTrial(planByIdAndMerchantId) === true) {
+        return await handleFreeTrialEnd(planByIdAndMerchantId)
+    }
+    else {
+        return dayjs(new Date())
+        .add(planByIdAndMerchantId?.planType?.interval, planByIdAndMerchantId?.planType?.intervalUnit)
+        .toISOString()
     }
 }
 
@@ -86,7 +131,7 @@ export const cancelSubscription = async (req: Request, res: Response) => {
             },
             UpdateExpression: 'set subscriptionStatus = :s, cancellationReason = :c',
             ExpressionAttributeValues: {
-                ':s': SubscriptionStatus.Canceled,
+                ':s': SubscriptionStatus.CanceledByCustomer,
                 ':c': cancellationReason
             },
             ReturnValues: 'UPDATED_NEW'

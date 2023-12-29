@@ -6,22 +6,20 @@ export interface ISubscription {
 
     subscriptionId: string
     subscriptionStatus: SubscriptionStatus
-    cancellationReason?: string
-    merchantId: string
-    planId: string
-    billing: {
-        nextBillingDate: Date
-        lastBillingDate: Date
-        billingCycle: number
-        billingCycleUnit: string
-        billingCycleAnchor: string //*represents the date that billing starts
-        billingAmount: number
-        billingCurrency: string
+    cancellationReason?: string | null
+    billing?: {
+        nextBillingDate: string | null
+        lastBillingDate?: string | null
+        billingCycle?: number | null
+        billingCycleUnit?: string | null
+        billingCycleAnchor?: string | null //*represents the date that billing starts
+        billingAmount?: number | null
+        billingCurrency?: string
     }
     freeTrial?: {
         isOnFreeTrial: boolean
-        freeTrialStart?: Date
-        freeTrialEnd?: Date
+        freeTrialStart?: string
+        freeTrialEnd?: string
     }
     paymentMethod?: {
         paymentMethodType: string
@@ -51,7 +49,8 @@ export interface ISubscription {
 
 export enum SubscriptionStatus {
     Active = 'active',
-    Canceled = 'canceled',
+    CanceledByMerchant = 'canceled by merchant',
+    CanceledByCustomer = 'canceled by customer',
     Expired = 'expired',
 }
 
