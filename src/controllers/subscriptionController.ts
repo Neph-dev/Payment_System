@@ -7,6 +7,8 @@ import dayjs from 'dayjs'
 
 import { ISubscription, SubscriptionStatus } from '../models/Subscription'
 import { findPlanByIdAndMerchantId } from '../helpers/findPlan'
+import { sendSubscriptionReceiptEmail } from '../helpers/sendEmail'
+import { findMerchantById } from '../helpers/findMerchant'
 
 AWS.config.update({ region: 'af-south-1' })
 const dynamoDB = new AWS.DynamoDB.DocumentClient()
@@ -22,7 +24,8 @@ export const subscribe = async (req: Request, res: Response) => {
             paymentMethod,
             renewal,
             notificationPreferences,
-            metadata
+            metadata,
+            email
         } = req.body
 
         const planByIdAndMerchantId = await findPlanByIdAndMerchantId(planId, merchantId)
@@ -34,11 +37,13 @@ export const subscribe = async (req: Request, res: Response) => {
             })
         }
 
+        const merchantById = await findMerchantById(merchantId)
+
         const subscription: ISubscription = {
             referenceIndex: reference,
             merchantIdIndex: merchantId,
             planIdIndex: planId,
-
+            email: email,
             subscriptionId: uuidv4(),
             subscriptionStatus: SubscriptionStatus.Active,
             cancellationReason: null,
@@ -48,13 +53,16 @@ export const subscribe = async (req: Request, res: Response) => {
                 billingCycle: planByIdAndMerchantId.planType.interval,
                 billingCycleUnit: planByIdAndMerchantId.planType.intervalUnit,
                 billingAmount: planByIdAndMerchantId.price,
-                billingCycleAnchor: await handleFreeTrial(planByIdAndMerchantId) ? await handleFreeTrialEnd(planByIdAndMerchantId) : new Date().toISOString(),
+                billingCycleAnchor: await handleFreeTrial(planByIdAndMerchantId) 
+                                    ? await handleFreeTrialEnd(planByIdAndMerchantId) : new Date().toISOString(),
                 billingCurrency: planByIdAndMerchantId.currency
             },
             freeTrial: {
                 isOnFreeTrial: await handleFreeTrial(planByIdAndMerchantId),
-                freeTrialStart: await handleFreeTrial(planByIdAndMerchantId) ? new Date().toISOString() : undefined,
-                freeTrialEnd: await handleFreeTrial(planByIdAndMerchantId) ? await handleFreeTrialEnd(planByIdAndMerchantId) : undefined
+                freeTrialStart: await handleFreeTrial(planByIdAndMerchantId) 
+                                ? new Date().toISOString() : undefined,
+                freeTrialEnd: await handleFreeTrial(planByIdAndMerchantId) 
+                                ? await handleFreeTrialEnd(planByIdAndMerchantId) : undefined
             },
             paymentMethod: paymentMethod,
             renewal: {
@@ -71,12 +79,14 @@ export const subscribe = async (req: Request, res: Response) => {
         }
         await dynamoDB.put(params).promise()
 
+        if(merchantById) {
+            await sendSubscriptionReceiptEmail(email, merchantById.name, planByIdAndMerchantId, 30)
+        }
+
         res.status(201).json({ 
             status: 201,
             success: true,
-            message: 'Subscription created successfully',
-            data1: subscription,
-            data: planByIdAndMerchantId
+            message: 'Subscription created successfully'
         })
 
     }

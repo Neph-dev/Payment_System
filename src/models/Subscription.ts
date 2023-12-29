@@ -3,6 +3,8 @@ export interface ISubscription {
     referenceIndex?: string 
     merchantIdIndex: string
     planIdIndex: string
+    userIdIndex?: string
+    email: string
 
     subscriptionId: string
     subscriptionStatus: SubscriptionStatus
