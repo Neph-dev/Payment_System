@@ -22,7 +22,7 @@ export interface IPlan {
 
 type PlanType = {
     isRecurring: boolean
-    interval?: number // recurring only
+    interval: number // recurring only
     intervalUnit?: IntervalUnit // recurring only
     trialPeriodDays: number // recurring only
 }

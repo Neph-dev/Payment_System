@@ -9,6 +9,9 @@ import { ISubscription, SubscriptionStatus } from '../models/Subscription'
 import { findPlanByIdAndMerchantId } from '../helpers/findPlan'
 import { sendSubscriptionReceiptEmail } from '../helpers/sendEmail'
 import { findMerchantById } from '../helpers/findMerchant'
+import { upgradeDuringBillingCycle } from '../helpers/handleProration'
+import { findSubscriptionById } from '../helpers/findSubscription'
+import { IntervalUnit } from '../models/Plan'
 
 AWS.config.update({ region: 'af-south-1' })
 const dynamoDB = new AWS.DynamoDB.DocumentClient()
@@ -127,6 +130,91 @@ const handleNextBillingDate = async (planByIdAndMerchantId: any) => {
         return dayjs(new Date())
         .add(planByIdAndMerchantId?.planType?.interval, planByIdAndMerchantId?.planType?.intervalUnit)
         .toISOString()
+    }
+}
+
+export const upgradeSubscription = async (req: Request, res: Response) => {
+    try {
+        const { oldPlanId, newPlanId, subscriptionId, merchantId } = req.body
+
+        const oldPlanByIdAndMerchantId = await findPlanByIdAndMerchantId(oldPlanId, merchantId)
+        const newPlanByIdAndMerchantId = await findPlanByIdAndMerchantId(newPlanId, merchantId)
+        const subscriptionById = await findSubscriptionById(subscriptionId)
+
+        if(
+            !oldPlanByIdAndMerchantId || 
+            !newPlanByIdAndMerchantId || 
+            !subscriptionById
+        ) {
+            return res.status(404).json({ 
+                status: 404,
+                success: false,
+                message: `Something went wrong. Please ensure that the old plan, new plan and subscription exist` 
+            })
+        }
+
+        if(newPlanByIdAndMerchantId.isActive === false) {
+            return res.status(400).json({ 
+                status: 400,
+                success: false,
+                message: `The new plan is not active` 
+            })
+        }
+
+        if(oldPlanByIdAndMerchantId.price > newPlanByIdAndMerchantId.price) {
+            return res.status(400).json({ 
+                status: 400,
+                success: false,
+                message: `You cannot upgrade from a higher plan to a lower plan.` 
+            })
+        }
+
+         // Check if billing cycle has started
+         const billingCycleStart = dayjs(subscriptionById?.billing?.billingCycleAnchor)
+         const today = dayjs(new Date())
+         const isBillingCycleStarted = today.isAfter(billingCycleStart)
+
+        //  if(isBillingCycleStarted === true) {
+
+            // Amount to be charged, add proration
+            const amountToBeCharged = await upgradeDuringBillingCycle(
+                newPlanByIdAndMerchantId,
+                oldPlanByIdAndMerchantId,
+                subscriptionById
+            )
+
+            subscriptionById.planIdIndex = newPlanByIdAndMerchantId.PlanId,
+            subscriptionById.billing.nextBillingDate = dayjs(today)
+                .add(newPlanByIdAndMerchantId.planType.interval, newPlanByIdAndMerchantId.planType.intervalUnit)
+                .toISOString(),
+            subscriptionById.billing.lastBillingDate = new Date().toISOString(),
+            subscriptionById.billing.billingCycle = newPlanByIdAndMerchantId.planType.interval,
+            subscriptionById.billing.billingCycleUnit = newPlanByIdAndMerchantId.planType.intervalUnit,
+            subscriptionById.billing.billingCycleAnchor = today.toISOString(),
+            subscriptionById.billing.billingAmount = newPlanByIdAndMerchantId.price,
+            subscriptionById.billing.billingCurrency = newPlanByIdAndMerchantId.currency
+            
+            return res.status(200).json({
+                status: 200,
+                success: true,
+                message: 'Subscription upgraded successfully',
+                subscription: subscriptionById,
+                amountCharged: amountToBeCharged
+            })
+        // }
+        // else {
+
+        // }
+            
+
+    }
+    catch (err: any) {
+        res.status(500).json({ 
+            status: 500,
+            success: false,
+            message: 'Error upgrading subscription', 
+            error: err.message
+        })
     }
 }
 

@@ -9,7 +9,7 @@ export interface ISubscription {
     subscriptionId: string
     subscriptionStatus: SubscriptionStatus
     cancellationReason?: string | null
-    billing?: {
+    billing: {
         nextBillingDate: string | null
         lastBillingDate?: string | null
         billingCycle?: number | null

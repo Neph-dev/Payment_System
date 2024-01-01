@@ -192,7 +192,7 @@ export const sendSubscriptionReceiptEmail = async (
                     </tr>
                     <tr>
                       <td>${plan.name}</td>
-                      <td>${plan.price}</td>
+                      <td>${plan.price} ${plan.currency}</td>
                     </tr>
                     <tr>
                       <td><b>Total</b></td>
