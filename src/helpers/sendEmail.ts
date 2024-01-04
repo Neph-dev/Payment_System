@@ -215,3 +215,55 @@ export const sendSubscriptionReceiptEmail = async (
     return AWS_SES.sendEmail(params).promise();
 };
   
+
+export const sendFailedTransactionEmail = async (
+  email: string, 
+) => {
+  const params = {
+      Source: process.env.SES_EMAIL  || '',
+      Destination: {
+          ToAddresses: [email || '']
+      },
+      ReplyToAddresses: [process.env.SES_EMAIL || ''],
+      Message: {
+        Body: {
+          Html: {
+            Charset: 'UTF-8',
+            Data: `<html> </html>`,
+          },
+        },
+      Subject: {
+        Charset: 'UTF-8',
+        Data: `Billing Problem`,
+      },
+    }
+  }
+
+  return AWS_SES.sendEmail(params).promise();
+}
+
+export const sendSuccessfullTransactionEmail = async (
+  email: string, 
+) => {
+  const params = {
+      Source: process.env.SES_EMAIL  || '',
+      Destination: {
+          ToAddresses: [email || '']
+      },
+      ReplyToAddresses: [process.env.SES_EMAIL || ''],
+      Message: {
+        Body: {
+          Html: {
+            Charset: 'UTF-8',
+            Data: `<html> </html>`,
+          },
+        },
+      Subject: {
+        Charset: 'UTF-8',
+        Data: `INVOICE`,
+      },
+    }
+  }
+
+  return AWS_SES.sendEmail(params).promise();
+}

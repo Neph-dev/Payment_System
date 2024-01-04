@@ -11,7 +11,7 @@ import { sendSubscriptionReceiptEmail } from '../helpers/sendEmail'
 import { findMerchantById } from '../helpers/findMerchant'
 import { upgradeDuringBillingCycle } from '../helpers/handleProration'
 import { findSubscriptionById } from '../helpers/findSubscription'
-import { IntervalUnit } from '../models/Plan'
+import { resetTime } from '../helpers/handleTimeReset'
 
 AWS.config.update({ region: 'af-south-1' })
 const dynamoDB = new AWS.DynamoDB.DocumentClient()
@@ -127,11 +127,11 @@ const handleNextBillingDate = async (planByIdAndMerchantId: any) => {
         return await handleFreeTrialEnd(planByIdAndMerchantId)
     }
     else {
-        return dayjs(new Date())
+        return dayjs(resetTime(new Date()))
         .add(planByIdAndMerchantId?.planType?.interval, planByIdAndMerchantId?.planType?.intervalUnit)
         .toISOString()
     }
-}
+}  
 
 export const upgradeSubscription = async (req: Request, res: Response) => {
     try {
@@ -170,43 +170,35 @@ export const upgradeSubscription = async (req: Request, res: Response) => {
         }
 
          // Check if billing cycle has started
-         const billingCycleStart = dayjs(subscriptionById?.billing?.billingCycleAnchor)
          const today = dayjs(new Date())
-         const isBillingCycleStarted = today.isAfter(billingCycleStart)
+        //  const billingCycleStart = dayjs(subscriptionById?.billing?.billingCycleAnchor)
+        // const isBillingCycleStarted = today.isAfter(billingCycleStart)
 
-        //  if(isBillingCycleStarted === true) {
+        // Amount to be charged, add proration
+        const amountToBeCharged = await upgradeDuringBillingCycle(
+            newPlanByIdAndMerchantId,
+            oldPlanByIdAndMerchantId,
+            subscriptionById
+        )
 
-            // Amount to be charged, add proration
-            const amountToBeCharged = await upgradeDuringBillingCycle(
-                newPlanByIdAndMerchantId,
-                oldPlanByIdAndMerchantId,
-                subscriptionById
-            )
-
-            subscriptionById.planIdIndex = newPlanByIdAndMerchantId.PlanId,
-            subscriptionById.billing.nextBillingDate = dayjs(today)
-                .add(newPlanByIdAndMerchantId.planType.interval, newPlanByIdAndMerchantId.planType.intervalUnit)
-                .toISOString(),
-            subscriptionById.billing.lastBillingDate = new Date().toISOString(),
-            subscriptionById.billing.billingCycle = newPlanByIdAndMerchantId.planType.interval,
-            subscriptionById.billing.billingCycleUnit = newPlanByIdAndMerchantId.planType.intervalUnit,
-            subscriptionById.billing.billingCycleAnchor = today.toISOString(),
-            subscriptionById.billing.billingAmount = newPlanByIdAndMerchantId.price,
-            subscriptionById.billing.billingCurrency = newPlanByIdAndMerchantId.currency
-            
-            return res.status(200).json({
-                status: 200,
-                success: true,
-                message: 'Subscription upgraded successfully',
-                subscription: subscriptionById,
-                amountCharged: amountToBeCharged
-            })
-        // }
-        // else {
-
-        // }
-            
-
+        subscriptionById.planIdIndex = newPlanByIdAndMerchantId.PlanId,
+        subscriptionById.billing.nextBillingDate = dayjs(today)
+            .add(newPlanByIdAndMerchantId.planType.interval, newPlanByIdAndMerchantId.planType.intervalUnit)
+            .toISOString(),
+        subscriptionById.billing.lastBillingDate = new Date().toISOString(),
+        subscriptionById.billing.billingCycle = newPlanByIdAndMerchantId.planType.interval,
+        subscriptionById.billing.billingCycleUnit = newPlanByIdAndMerchantId.planType.intervalUnit,
+        subscriptionById.billing.billingCycleAnchor = today.toISOString(),
+        subscriptionById.billing.billingAmount = newPlanByIdAndMerchantId.price,
+        subscriptionById.billing.billingCurrency = newPlanByIdAndMerchantId.currency
+        
+        return res.status(200).json({
+            status: 200,
+            success: true,
+            message: 'Subscription upgraded successfully',
+            subscription: subscriptionById,
+            amountCharged: amountToBeCharged
+        })
     }
     catch (err: any) {
         res.status(500).json({ 

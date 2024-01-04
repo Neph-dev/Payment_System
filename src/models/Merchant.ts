@@ -38,7 +38,7 @@ export interface IMerchant {
         }
     ]
     ownerInformation?: string
-    createdAt?: Date
+    createdAt?: string
 }
 
 export enum MerchantStatus {

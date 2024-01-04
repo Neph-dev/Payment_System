@@ -1,3 +1,4 @@
+
 export interface IPlan {
 
     merchantIdIndex: string
@@ -9,6 +10,7 @@ export interface IPlan {
     price: number
     currency: string
     planType: PlanType
+    defaultSmartRetry?: SmartRetry
     promotion?: {
         isOnPromotion: boolean
         oldPrice?: number
@@ -31,6 +33,13 @@ type PlanFeature = {
     featureId: string
     featureName: string
     featureDescription: string
+}
+
+export type SmartRetry = {
+    isSmartRetry: boolean
+    smartRetryCount: number
+    smartRetryInterval: number
+    smartRetryIntervalUnit: IntervalUnit.day
 }
 
 export enum IntervalUnit {

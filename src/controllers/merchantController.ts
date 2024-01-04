@@ -80,7 +80,7 @@ export const createMerchant = async (req: Request, res: Response) => {
                     country: body.country
                 }
             },
-            createdAt: new Date()
+            createdAt: new Date().toISOString()
         }
 
         const verificationToken = uuidv4()

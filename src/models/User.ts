@@ -11,7 +11,7 @@ export interface IUser  {
         username: string,
         password: string
     }
-    verification: {
+    verification?: {
         isEmailVerified?: boolean
         isPhoneNumberVerified?: boolean
     }

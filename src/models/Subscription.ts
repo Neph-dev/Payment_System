@@ -1,3 +1,5 @@
+import { SmartRetry } from "./Plan"
+
 export interface ISubscription {
     
     referenceIndex?: string 
@@ -9,6 +11,7 @@ export interface ISubscription {
     subscriptionId: string
     subscriptionStatus: SubscriptionStatus
     cancellationReason?: string | null
+    smartRetry?: SmartRetry
     billing: {
         nextBillingDate: string | null
         lastBillingDate?: string | null
@@ -53,7 +56,8 @@ export enum SubscriptionStatus {
     Active = 'active',
     CanceledByMerchant = 'canceled by merchant',
     CanceledByCustomer = 'canceled by customer',
-    Expired = 'expired',
+    CanceledBySystem = 'canceled by system',
+    Expired = 'expired'
 }
 
 type Address = {
