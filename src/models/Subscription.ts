@@ -2,12 +2,12 @@ import { SmartRetry } from "./Plan"
 
 export interface ISubscription {
     
-    referenceIndex?: string 
+    referenceIndex: string 
     merchantIdIndex: string
     planIdIndex: string
     userIdIndex?: string
-    email: string
 
+    email: string
     subscriptionId: string
     subscriptionStatus: SubscriptionStatus
     cancellationReason?: string | null

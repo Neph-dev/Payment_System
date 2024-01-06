@@ -137,14 +137,12 @@ export const getPlans = async (req: Request, res: Response) => {
     }
 }
 
-
-// *! NOT WORKING
-export const updatePlan = async (req: Request, res: Response) => {
-    try {
-        const body = req.body
-        const merchantId = body.decoded.data.MerchantId
+// * Activate or deactivate a plan
+export const updatePlanStatus = async (req: Request, res: Response) => {
+   try {
+        const merchantId = req.body.decoded.data.MerchantId
         const { name } = req.params
-        const { description, price, currency, features } = req.body
+        let message
 
         const existingPlanByName = await findPlanByNameAndMerchantId(name, merchantId)
         if (!existingPlanByName) {
@@ -155,30 +153,46 @@ export const updatePlan = async (req: Request, res: Response) => {
             })
         }
 
-        const params = {
-            TableName: PLAN_TABLE_NAME,
-            Key: {
-                merchantIdIndex: merchantId,
-                nameIndex: name
-            },
-            UpdateExpression: 'set description = :description, price = :price, currency = :currency, features = :features',
-            ExpressionAttributeValues: {
-                // ':nameIndex': name,
-                ':description': description,
-                ':price': price,
-                ':currency': currency,
-                ':features': features
-            },
-            ReturnValues: 'UPDATED_NEW'
+        if(existingPlanByName.isActive) {
+            const params = {
+                TableName: PLAN_TABLE_NAME,
+                Key: {
+                    PlanId: existingPlanByName.PlanId
+                },
+                UpdateExpression: 'set isActive = :isActive',
+                ExpressionAttributeValues: {
+                    ':isActive': false
+                },
+                ReturnValues: 'UPDATED_NEW'
+            }
+
+            await dynamoDB.update(params).promise()
+
+            message = 'Plan desactivated successfully'
+        }
+        else {
+            const params = {
+                TableName: PLAN_TABLE_NAME,
+                Key: {
+                    PlanId: existingPlanByName.PlanId
+                },
+                UpdateExpression: 'set isActive = :isActive',
+                ExpressionAttributeValues: {
+                    ':isActive': true
+                },
+                ReturnValues: 'UPDATED_NEW'
+            }
+
+            await dynamoDB.update(params).promise()
+
+            message = 'Plan activated successfully'
         }
 
-        const data = await dynamoDB.update(params).promise()
-
         res.status(200).json({ 
-            message: 'Plan updated successfully',
+            message: message,
             status: 200,
             success: true,
-            data: data
+            data: existingPlanByName
         })
     }
     catch (error) {

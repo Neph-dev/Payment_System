@@ -1,20 +1,20 @@
 import { UserRole } from "../helpers/users"
 
 export interface IUser  {
-    emailIndex?: string 
-    phoneNumberIndex?: string 
-
+    referenceIndex: string
+    merchantIdIndex: string
+    
     userId: string
     email?: String
     phoneNumber?: String
     auth?: {
-        username: string,
-        password: string
+        username?: string
+        password?: string
     }
     verification?: {
         isEmailVerified?: boolean
         isPhoneNumberVerified?: boolean
     }
-    role: UserRole
-    createdAt: Date
+    role: UserRole.USER
+    createdAt: string
 }

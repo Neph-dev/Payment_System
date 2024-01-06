@@ -14,85 +14,80 @@ const dynamoDB = new AWS.DynamoDB.DocumentClient()
 const SUPERADMIN_TABLE_NAME = 'SuperAdmins'
 
 
+// * When creating a Super Admin, we need to:
+// *    1. Check iff the IdType is correct
+// *    2. Check if the Super Admin already exists in the database
+// *    3. If the Super Admin already exists, add the Merchant to the Super Admin's merchants list
+// *    4. if the Super Admin does not exist, create the Super Admin and add the Merchant to the Super Admin's merchants list
+
 export const CreateSuperAdmin = async (req: Request, res: Response) => {
     try{
         let body = req.body.user
         const { emailAddress } = req.body
 
         if (!Object.values(IdTypes).includes(body.IDType)) {
-            return res.status(400).json({ 
-                message: 'Invalid Id Type',
-                status: 400,
-                success: false
-            })
+            return 500
         }
+        else {
 
-        const existingUserByEmail = await findSuperAdminByEmail(body.email)
-        const existingUserByIDNumber = await findSuperAdminByIDNumber(body.IDNumber)
+            const existingSuperAdminByEmail = await findSuperAdminByEmail(body.email)
+            const existingSuperAdminByIDNumber = await findSuperAdminByIDNumber(body.IDNumber)
 
-        const existingMerchantByEmail = await findMerchantByEmail(emailAddress)
-        
-        if (existingUserByEmail || existingUserByIDNumber ) {
-            const params = {
-                TableName: SUPERADMIN_TABLE_NAME,
-                Key: {
-                    superAdminId: existingUserByEmail?.superAdminId
-                },
-                UpdateExpression: 'SET merchants = list_append(merchants, :merchantId)',
-                ExpressionAttributeValues: {
-                    ':merchantId': [existingMerchantByEmail?.MerchantId]
-                },
-                ReturnValues: 'UPDATED_NEW'
-            }
-            await dynamoDB.update(params).promise()
-            return 200
-        }
-
-        const superAdmin: ISuperAdmin = {
-            superAdminId: uuidv4(),
+            const existingMerchantByEmail = await findMerchantByEmail(emailAddress)
             
-            emailIndex: body.email,
-            IDNumberIndex: body.IDNumber,
-
-            personal: {
-                firstName: body.firstName,
-                middleName: body.middleName || null,
-                lastName: body.lastName,
-                phoneNumber: body.phoneNumber,
-                IDType: body.IDType,
-                IDNumber: body.IDNumber
-            },
-            contact: {
-                email: body.email,
-                phoneNumber: body.phoneNumber,
-                physicalAddress: {
-                    streetAddress: body.streetAddress,
-                    postalCode: body.postalCode,
-                    city: body.city,
-                    country: body.country
+            if (existingSuperAdminByEmail || existingSuperAdminByIDNumber ) {
+                const params = {
+                    TableName: SUPERADMIN_TABLE_NAME,
+                    Key: {
+                        superAdminId: existingSuperAdminByEmail?.superAdminId
+                    },
+                    UpdateExpression: 'SET merchants = list_append(merchants, :merchantId)',
+                    ExpressionAttributeValues: {
+                        ':merchantId': [existingMerchantByEmail?.MerchantId]
+                    },
+                    ReturnValues: 'UPDATED_NEW'
                 }
-            },
-            role: UserRole.SUPERADMIN,
-            merchants: existingMerchantByEmail ? [existingMerchantByEmail.MerchantId] : [],
-            createdAt: new Date()
+                await dynamoDB.update(params).promise()
+                return 200
+            }
+
+            const superAdmin: ISuperAdmin = {
+                superAdminId: uuidv4(),
+                
+                emailIndex: body.email,
+                IDNumberIndex: body.IDNumber,
+
+                personal: {
+                    firstName: body.firstName,
+                    middleName: body.middleName || null,
+                    lastName: body.lastName,
+                    phoneNumber: body.phoneNumber,
+                    IDType: body.IDType,
+                    IDNumber: body.IDNumber
+                },
+                contact: {
+                    email: body.email,
+                    phoneNumber: body.phoneNumber,
+                    physicalAddress: {
+                        streetAddress: body.streetAddress,
+                        postalCode: body.postalCode,
+                        city: body.city,
+                        country: body.country
+                    }
+                },
+                role: UserRole.SUPERADMIN,
+                merchants: existingMerchantByEmail ? [existingMerchantByEmail.MerchantId] : [],
+                createdAt: new Date()
+            }
+
+            const params = { TableName: SUPERADMIN_TABLE_NAME, Item: superAdmin }
+
+            await dynamoDB.put(params).promise()
+            return 201
         }
-
-        const params = { TableName: SUPERADMIN_TABLE_NAME, Item: superAdmin }
-
-        await dynamoDB.put(params).promise()
-        return 201
     }
     catch (error) {
         console.error('Error creating superAdmin:', error)
         return 500
     }
-}
-
-export const CreateAdmin = async (req: Request, res: Response) => {
-    // Only the Super admin can create an Admin. In this case, 
-    // first check that the userId of the request belongs to an admin, 
-    // then generate password associated to the email
-    // then create the admin
-    // then send the password to the admin's email
-    // then return the admin object
 }

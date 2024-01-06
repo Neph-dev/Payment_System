@@ -12,10 +12,14 @@ import { findMerchantById } from '../helpers/findMerchant'
 import { upgradeDuringBillingCycle } from '../helpers/handleProration'
 import { findSubscriptionById } from '../helpers/findSubscription'
 import { resetTime } from '../helpers/handleTimeReset'
+import { findUserByEmail, findUserByRefAndMerchand } from '../helpers/findUser'
+import { createUser } from './userController'
+import { UserRole } from '../helpers/users'
 
 AWS.config.update({ region: 'af-south-1' })
 const dynamoDB = new AWS.DynamoDB.DocumentClient()
 const SUBSCRIPTION_TABLE_NAME = 'Subscriptions'
+const USER_TABLE_NAME = 'Users'
 
 
 export const subscribe = async (req: Request, res: Response) => {
@@ -28,7 +32,10 @@ export const subscribe = async (req: Request, res: Response) => {
             renewal,
             notificationPreferences,
             metadata,
-            email
+            email,
+            referenceIndex,
+            merchantIdIndex,
+            phoneNumber
         } = req.body
 
         const planByIdAndMerchantId = await findPlanByIdAndMerchantId(planId, merchantId)
@@ -40,12 +47,27 @@ export const subscribe = async (req: Request, res: Response) => {
             })
         }
 
+        let userByRefAndMerchand = await findUserByRefAndMerchand(referenceIndex, merchantIdIndex)
+        let newUserByRefAndMerchand
+
+        if(!userByRefAndMerchand) {
+            newUserByRefAndMerchand = await createUser(
+                email,
+                referenceIndex,
+                merchantIdIndex,
+                phoneNumber
+            )
+        }
+
         const merchantById = await findMerchantById(merchantId)
 
         const subscription: ISubscription = {
+
             referenceIndex: reference,
             merchantIdIndex: merchantId,
             planIdIndex: planId,
+            userIdIndex: userByRefAndMerchand?.userId.toString() || newUserByRefAndMerchand?.userId.toString() || undefined,
+
             email: email,
             subscriptionId: uuidv4(),
             subscriptionStatus: SubscriptionStatus.Active,

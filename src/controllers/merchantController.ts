@@ -3,27 +3,28 @@ import { Request, Response } from 'express'
 import AWS from 'aws-sdk'
 
 import bcrypt from 'bcrypt'
-import dayjs from 'dayjs'
 import { v4 as uuidv4 } from 'uuid'
 
-import { AccountType, IMerchant, MerchantStatus } from '../models/Merchant'
-import { 
-    findMerchantByEmail, 
-    findMerchantByName, 
-    findMerchantByRegistrationNumber 
-} from '../helpers/findMerchant'
 import { CreateSuperAdmin } from './superAdminController'
 import { sendMerchantVerificationEmail } from '../helpers/sendEmail'
+import { AccountType, IMerchant, MerchantStatus } from '../models/Merchant'
+import { findMerchantByEmail, findMerchantByName, findMerchantByRegistrationNumber } from '../helpers/findMerchant'
+import { generateVerificationCode } from '../helpers/createToken'
 
 AWS.config.update({ region: 'af-south-1' })
 const dynamoDB = new AWS.DynamoDB.DocumentClient()
 const MERCHANT_TABLE_NAME = 'Merchants'
 
 
-// * 1. Check if the merchant already exist by email, name, or registration number.
-// * 2. If yes, send response
-// * 3. If no, first, generate merchant,
-// * 4. then, generate user with SuperAdmin role
+// * Creating the Merchant, we need to:
+// *    1. Check if the Merchant already exists in the database   
+// *    2. Hash the password
+// *    3. Generate a verification token
+// *    4. Send the verification email
+// *    5. Create a Super Admin if one doesn't exist
+// *    6. Save the Merchant in the database
+// *    7. Return a success message
+
 export const createMerchant = async (req: Request, res: Response) => {
     try{
         let body = req.body
@@ -83,15 +84,16 @@ export const createMerchant = async (req: Request, res: Response) => {
             createdAt: new Date().toISOString()
         }
 
-        const verificationToken = uuidv4()
-        merchant.auth.confirmationCode = verificationToken
-        merchant.auth.codeExpirationDate = dayjs().hour(24).format()
+        let verificationData = await generateVerificationCode(merchant)
+
+        merchant.auth.confirmationCode = verificationData.verificationToken
+        merchant.auth.codeExpirationDate = verificationData.codeExpirationDate
         
         const params = { TableName: MERCHANT_TABLE_NAME, Item: merchant }
         
         await dynamoDB.put(params).promise()
+
         const createSuperAdmin = await CreateSuperAdmin(req, res)
-        
         if (createSuperAdmin === 500) {
             return res.status(500).json({ 
                 message: 'Error Creating Super Admin',
@@ -100,7 +102,7 @@ export const createMerchant = async (req: Request, res: Response) => {
             })
         }
         
-        await sendMerchantVerificationEmail(email, verificationToken)
+        await sendMerchantVerificationEmail(email, verificationData.verificationToken)
 
         res.status(201).json({ 
             message: 'Merchant Created Successfully!',
@@ -110,7 +112,6 @@ export const createMerchant = async (req: Request, res: Response) => {
         })
     }
     catch (error) {
-        console.error('Error creating merchant:', error)
         res.status(500).json({ 
             message: `Internal Server Error ${error}`,
             status: 500,

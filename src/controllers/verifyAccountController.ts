@@ -4,12 +4,12 @@ import AWS from 'aws-sdk'
 import dayjs from 'dayjs'
 
 import { findMerchantByEmail } from '../helpers/findMerchant'
-import { findIAMuserByEmail } from '../helpers/findUser'
+import { sendMerchantVerificationEmail } from '../helpers/sendEmail'
+import { generateVerificationCode } from '../helpers/createToken'
 
 AWS.config.update({ region: 'af-south-1' })
 const dynamoDB = new AWS.DynamoDB.DocumentClient()
 const MERCHANT_TABLE_NAME = 'Merchants'
-const IAM_TABLE_NAME = 'IAMusers'
 
 
 export const verifyMerchantAccount = async (req: Request, res: Response) => {
@@ -45,64 +45,65 @@ export const verifyMerchantAccount = async (req: Request, res: Response) => {
         await dynamoDB.update(params).promise()
         res.status(201).json({ 
             message: 'Merchant Verified Successfully!',
-            status: 201,
-            success: true,
+            status: 201
         })
 
     }
     catch (err) {
-        console.log(err)
         return res.status(500).json({
             message: 'Internal Server Error',
             status: 500,
-            success: false
         })
     }
 }
 
-export const verifyIAMAccount = async (req: Request, res: Response) => {
+// * To resend the account verification code, we need to:
+// *    1. Check if the Merchant exists in the database
+// *    2. Check if the account is already verified
+// *    3. Generate a verification token
+// *    4. Send the verification email
+// *    5. Save the verification token in the database
+export const resendVerificationCode = async (req: Request, res: Response) => {
     try {
-        const { email, token } = req.params
+        const { email } = req.params
 
-        const existingIAMByEmail = await findIAMuserByEmail(email)
-        if (!existingIAMByEmail ) {
-            return res.status(404).json({ message: "User doesn't exist" })
+        const existingMerchantByEmail = await findMerchantByEmail(email)
+        if (!existingMerchantByEmail) {
+            return res.status(404).json({ message: "Merchant doesn't exist" })
         }
-        if (existingIAMByEmail.isAccountVerified) {
+        if (existingMerchantByEmail.isAccountVerified) {
             return res.status(400).json({ message: 'Account already verified' })
         }
-        if (existingIAMByEmail.auth.confirmationCode !== token) {
-            return res.status(400).json({ message: 'Invalid token' })
-        }
-        if (dayjs().isAfter(existingIAMByEmail.auth.codeExpirationDate)) {
-            return res.status(400).json({ message: 'Token expired' })
-        }
+
+        let verificationData = await generateVerificationCode(existingMerchantByEmail)
 
         const params = {
-            TableName: IAM_TABLE_NAME,
+            TableName: MERCHANT_TABLE_NAME,
             Key: {
-                IAMid: existingIAMByEmail.IAMid
+                MerchantId: existingMerchantByEmail.MerchantId
             },
-            UpdateExpression: 'set isAccountVerified = :isAccountVerified',
+            UpdateExpression: 'set auth.confirmationCode = :confirmationCode, auth.codeExpirationDate = :codeExpirationDate',
             ExpressionAttributeValues: {
-                ':isAccountVerified': true
+                ':confirmationCode': verificationData.verificationToken,
+                ':codeExpirationDate': verificationData.codeExpirationDate
             },
             ReturnValues: 'UPDATED_NEW'
         }
 
         await dynamoDB.update(params).promise()
+
+        await sendMerchantVerificationEmail(email, verificationData.verificationToken)
+
         res.status(201).json({ 
-            message: 'User Verified Successfully!',
-            status: 201,
-            success: true,
+            message: 'Verification code sent successfully!',
+            status: 201
         })
+
     }
     catch (err) {
-        console.log(err)
         return res.status(500).json({
             message: 'Internal Server Error',
             status: 500,
-            success: false
         })
     }
 }

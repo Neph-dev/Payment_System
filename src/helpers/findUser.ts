@@ -1,4 +1,3 @@
-import { IIAMUser } from "../models/IAMUsers"
 import { ISuperAdmin } from "../models/SuperAdmin"
 import AWS from 'aws-sdk'
 import { IUser } from "../models/User"
@@ -46,42 +45,6 @@ export const findSuperAdminByIDNumber = async (IDNumberIndex: string): Promise<I
     return data.Items[0] as ISuperAdmin
 }
 
-export const findIAMuserByEmail = async (emailIndex: string): Promise<IIAMUser | undefined> => {
-    const params = {
-        TableName: IAM_TABLE_NAME,
-        IndexName: 'emailIndex-index',
-        KeyConditionExpression: '#emailIndex = :emailIndex',
-        ExpressionAttributeNames: { '#emailIndex': 'emailIndex' },
-        ExpressionAttributeValues: { ':emailIndex': emailIndex }
-    }
-
-    const data = await dynamoDB.query(params).promise()
-
-    if (!data.Items || data.Items.length === 0) {
-        return undefined
-    }
-
-    return data.Items[0] as IIAMUser
-}
-
-export const findIAMuserByName = async (nameIndex: string): Promise<IIAMUser | undefined> => {
-    const params = {
-        TableName: IAM_TABLE_NAME,
-        IndexName: 'nameIndex-index',
-        KeyConditionExpression: '#nameIndex = :nameIndex',
-        ExpressionAttributeNames: { '#nameIndex': 'nameIndex' },
-        ExpressionAttributeValues: { ':nameIndex': nameIndex }
-    }
-
-    const data = await dynamoDB.query(params).promise()
-
-    if (!data.Items || data.Items.length === 0) {
-        return undefined
-    }
-
-    return data.Items[0] as IIAMUser
-}
-
 export const findUserByEmail = async (emailIndex: string): Promise<IUser | undefined> => {
     const params = {
         TableName: USER_TABLE_NAME,
@@ -107,6 +70,32 @@ export const findUserByPhoneNumber = async (phoneNumberIndex: string): Promise<I
         KeyConditionExpression: '#phoneNumberIndex = :phoneNumberIndex',
         ExpressionAttributeNames: { '#phoneNumberIndex': 'phoneNumberIndex' },
         ExpressionAttributeValues: { ':phoneNumberIndex': phoneNumberIndex }
+    }
+
+    const data = await dynamoDB.query(params).promise()
+
+    if (!data.Items || data.Items.length === 0) {
+        return undefined
+    }
+
+    return data.Items[0] as IUser
+}
+
+export const findUserByRefAndMerchand = async (
+    referenceIndex: string, merchantIdIndex:string
+): Promise<IUser | undefined> => {
+    const params = {
+        TableName: USER_TABLE_NAME,
+        IndexName: 'RefMerchantIndex',
+        KeyConditionExpression: '#referenceIndex = :referenceIndex AND #merchantIdIndex = :merchantIdIndex',
+        ExpressionAttributeNames: { 
+            '#referenceIndex': 'referenceIndex', 
+            '#merchantIdIndex': 'merchantIdIndex' 
+        },
+        ExpressionAttributeValues: { 
+            ':referenceIndex': referenceIndex, 
+            ':merchantIdIndex': merchantIdIndex 
+        }
     }
 
     const data = await dynamoDB.query(params).promise()
