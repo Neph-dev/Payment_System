@@ -23,6 +23,25 @@ export const findSubscriptionById = async (subscriptionId: string): Promise<ISub
     return data.Items[0] as ISubscription
 }
 
+export const getSubscriptionByMerchantIdAndReference = async (merchantIdIndex: string, referenceIndex: string) => {
+    const params = {
+        TableName: SUBSCRIPTION_TABLE_NAME,
+        IndexName: 'ReferenceMerchantIdIndex',
+        KeyConditionExpression: 'merchantIdIndex = :m AND referenceIndex = :r',
+        ExpressionAttributeValues: {
+            ':m': merchantIdIndex,
+            ':r': referenceIndex
+        }
+    }
+    const data = await dynamoDB.query(params).promise()
+
+    if (!data.Items || data.Items.length === 0) {
+        return []
+    }
+
+    return data.Items as ISubscription[]
+}
+
 export const findSubscriptionsForBilling = async (date: Date): Promise<ISubscription[]> => {
     const params = {
         TableName: SUBSCRIPTION_TABLE_NAME,

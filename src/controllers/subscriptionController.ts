@@ -10,16 +10,14 @@ import { findPlanByIdAndMerchantId } from '../helpers/findPlan'
 import { sendSubscriptionReceiptEmail } from '../helpers/sendEmail'
 import { findMerchantById } from '../helpers/findMerchant'
 import { upgradeDuringBillingCycle } from '../helpers/handleProration'
-import { findSubscriptionById } from '../helpers/findSubscription'
+import { findSubscriptionById, getSubscriptionByMerchantIdAndReference } from '../helpers/findSubscription'
 import { resetTime } from '../helpers/handleTimeReset'
-import { findUserByEmail, findUserByRefAndMerchand } from '../helpers/findUser'
+import { findUserByRefAndMerchand } from '../helpers/findUser'
 import { createUser } from './userController'
-import { UserRole } from '../helpers/users'
 
 AWS.config.update({ region: 'af-south-1' })
 const dynamoDB = new AWS.DynamoDB.DocumentClient()
 const SUBSCRIPTION_TABLE_NAME = 'Subscriptions'
-const USER_TABLE_NAME = 'Users'
 
 
 export const subscribe = async (req: Request, res: Response) => {
@@ -47,6 +45,16 @@ export const subscribe = async (req: Request, res: Response) => {
             })
         }
 
+        const subscriptionByMerchantIdAndReference = await getSubscriptionByMerchantIdAndReference(merchantIdIndex, referenceIndex)
+
+        if(subscriptionByMerchantIdAndReference.length > 0) {
+            return res.status(400).json({ 
+                status: 400,
+                success: false,
+                message: `Subscription with reference ${referenceIndex} and Merchant ID ${merchantId} already exist` 
+            })
+        }
+
         let userByRefAndMerchand = await findUserByRefAndMerchand(referenceIndex, merchantIdIndex)
         let newUserByRefAndMerchand
 
@@ -63,7 +71,7 @@ export const subscribe = async (req: Request, res: Response) => {
 
         const subscription: ISubscription = {
 
-            referenceIndex: reference,
+            referenceIndex: referenceIndex,
             merchantIdIndex: merchantId,
             planIdIndex: planId,
             userIdIndex: userByRefAndMerchand?.userId.toString() || newUserByRefAndMerchand?.userId.toString() || undefined,
