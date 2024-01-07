@@ -69,7 +69,7 @@ export const processPayment = async (req: Request, res: Response) => {
             }
             await dynamoDB.update(params).promise()
             
-            await sendFailedTransactionEmail('snephthali@gmail.com')
+            await sendFailedTransactionEmail('snephthali@gmail.com', {})
 
             return res.status(400).json({
                 status: 400,

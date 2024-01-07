@@ -215,29 +215,100 @@ export const sendSubscriptionReceiptEmail = async (
     return AWS_SES.sendEmail(params).promise();
 };
   
-
-export const sendFailedTransactionEmail = async (
-  email: string, 
-) => {
+export const sendFailedTransactionEmail = async ( email: string, plan: any ) => {
   const params = {
-      Source: process.env.SES_EMAIL  || '',
-      Destination: {
-          ToAddresses: [email || '']
-      },
-      ReplyToAddresses: [process.env.SES_EMAIL || ''],
-      Message: {
-        Body: {
-          Html: {
-            Charset: 'UTF-8',
-            Data: `<html> </html>`,
-          },
+    Source: process.env.SES_EMAIL || '',
+    Destination: {
+      ToAddresses: [email || ''],
+    },
+    ReplyToAddresses: [process.env.SES_EMAIL || ''],
+    Message: {
+      Body: {
+        Html: {
+          Charset: 'UTF-8',
+          Data: `<html>
+              <head>
+                <style>
+                  body {
+                    font-family: 'Arial', sans-serif;
+                    margin: 20px;
+                    padding: 20px;
+                    background-color: #f7f7f7;
+                    color: #fff; /* White font color */
+                  }
+
+                  h2 {
+                    color: #333;
+                  }
+
+                  p {
+                    margin: 10px 0;
+                    color: #555;
+                  }
+
+                  table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                  }
+
+                  th, td {
+                    padding: 12px;
+                    text-align: left;
+                    border-bottom: 1px solid #ddd;
+                    color: #fff; /* White font color */
+                  }
+
+                  th {
+                    background-color: #007bff; /* Blue background for header */
+                  }
+
+                  .button {
+                    display: inline-block;
+                    padding: 15px;
+                    background-color: #007bff; /* Blue button color */
+                    color: #fff; /* White font color */
+                    text-decoration: none;
+                    font-size: 18px;
+                    font-weight: bold;
+                    border-radius: 5px;
+                  }
+
+                  .footer {
+                    margin-top: 20px;
+                    color: #777;
+                  }
+                </style>
+              </head>
+              <body>
+                <h2>Dear User,</h2>
+                <p>The charge for your subscription was declined by your payment method. To avoid losing access to your service, please update your payment method.</p>
+                <hr />
+                <a href="your-update-payment-url" class="button">Update Payment Method</a>
+                <table>
+                  <tr>
+                    <th>Item</th>
+                    <th>Amount</th>
+                  </tr>
+                  <tr>
+                    <td>${plan.name}</td>
+                    <td>${plan.price} ${plan.currency}</td>
+                  </tr>
+                  <tr>
+                    <td><b>Total</b></td>
+                  </tr>
+                </table>
+                <p class="footer">Sincerely,<br />Payment_System Team</p>
+              </body>
+          </html>`,
         },
+      },
       Subject: {
         Charset: 'UTF-8',
-        Data: `Billing Problem`,
+        Data: 'Billing Problem',
       },
-    }
-  }
+    },
+  };
 
   return AWS_SES.sendEmail(params).promise();
 }
@@ -255,7 +326,11 @@ export const sendSuccessfullTransactionEmail = async (
         Body: {
           Html: {
             Charset: 'UTF-8',
-            Data: `<html> </html>`,
+            Data: `
+            <html>
+            
+            </html>
+            `,
           },
         },
       Subject: {

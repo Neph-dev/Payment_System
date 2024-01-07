@@ -23,7 +23,6 @@ const SUBSCRIPTION_TABLE_NAME = 'Subscriptions'
 export const subscribe = async (req: Request, res: Response) => {
     try {
         const {
-            reference, 
             merchantId,
             planId,
             paymentMethod,
@@ -36,6 +35,7 @@ export const subscribe = async (req: Request, res: Response) => {
             phoneNumber
         } = req.body
 
+        // *Might not need it.
         const planByIdAndMerchantId = await findPlanByIdAndMerchantId(planId, merchantId)
         if(!planByIdAndMerchantId) {
             return res.status(400).json({ 
@@ -74,7 +74,7 @@ export const subscribe = async (req: Request, res: Response) => {
             referenceIndex: referenceIndex,
             merchantIdIndex: merchantId,
             planIdIndex: planId,
-            userIdIndex: userByRefAndMerchand?.userId.toString() || newUserByRefAndMerchand?.userId.toString() || undefined,
+            userIdIndex: userByRefAndMerchand?.userId.toString() || newUserByRefAndMerchand?.userId.toString(),
 
             email: email,
             subscriptionId: uuidv4(),
